@@ -97,20 +97,13 @@ func (sim *Simulation) tickHuman(h *Human) {
 	if !h.Infected() || h.Dead() {
 		return
 	}
-
-	// Update human health.
-	h.Health -= h.Virus.Lethality
-	if h.Health < 0 {
-		h.Health = 0
-	}
-
-	// Spread the virus!
+	h.Suffer(h.Virus.Lethality)
 	sim.spreadVirusOnBehalfOf(h)
 }
 
 func (sim *Simulation) spreadVirusOnBehalfOf(h *Human) {
 	for i := 0; i < sim.sociability; i++ {
-		luckyIndividual := sim.pickRandomHumanOtherThan(h)
+		luckyIndividual := sim.pickRandomLivingHumanOtherThan(h)
 		if luckyIndividual.Infected() {
 			continue
 		}
@@ -133,17 +126,20 @@ func (sim *Simulation) spreadVirusOnBehalfOf(h *Human) {
 	}
 }
 
-func (sim *Simulation) pickRandomHumanOtherThan(h *Human) *Human {
+func (sim *Simulation) pickRandomLivingHumanOtherThan(h *Human) *Human {
 	if len(sim.humans) == 1 {
 		panic(errors.New("covid19: only one human"))
 	}
-
-Top:
-	choice := sim.humans[prand.Intn(len(sim.humans))]
-	if choice == h {
-		goto Top
+	for {
+		choice := sim.humans[prand.Intn(len(sim.humans))]
+		if choice == h {
+			continue
+		}
+		if choice.Dead() {
+			continue
+		}
+		return choice
 	}
-	return choice
 }
 
 // Humans returns the humans present in the simulation.

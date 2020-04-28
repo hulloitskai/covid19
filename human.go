@@ -40,6 +40,14 @@ func (h *Human) Status() string {
 	}
 }
 
+// Suffer causes the Human to lose the given amount of health.
+func (h *Human) Suffer(amount int) {
+	h.Health -= amount
+	if h.Health < 0 {
+		h.Health = 0
+	}
+}
+
 // A Birther creates Humans.
 type Birther struct {
 	client *http.Client
