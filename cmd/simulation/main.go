@@ -26,7 +26,7 @@ func exec(args []string) error {
 	birther := covid19.NewBirther(nil)
 	simulation := covid19.NewSimulation(birther, covid19.Epoch)
 
-	// Prepopulate simulation.
+	// Prepopulate simulation with uninfected humans.
 	if err := simulation.Prepopulate(25); err != nil {
 		return errors.Wrap(err, "prepopulate")
 	}
@@ -39,7 +39,7 @@ func exec(args []string) error {
 
 	// Play simulation, day-by-day.
 	for {
-		fmt.Printf("----- %s -----\n", simulation.Date().Format("2006-01-02"))
+		fmt.Printf("[ %s ]\n", simulation.Date().Format("2006-01-02"))
 		for _, h := range simulation.Humans() {
 			fmt.Printf(
 				"%s (🤮: %t, ❤️: %d): %s\n",

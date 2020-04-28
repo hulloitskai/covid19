@@ -39,14 +39,14 @@ func NewSimulation(b *Birther, start time.Time) *Simulation {
 
 const (
 	defaultSociability       = 3
-	defaultMutationFrequency = 7 * howLongIsADay
+	defaultMutationFrequency = 7 * dayDuration
 )
 
 func (sim *Simulation) addHuman(h *Human) { sim.humans = append(sim.humans, h) }
 func (sim *Simulation) addVirus(v *Virus) { sim.viruses = append(sim.viruses, v) }
 
-// Progenerate begins an outbreak with an initial infected human (a "patient
-// zero").
+// Progenerate begins an outbreak by spawning a human infected with v, and
+// adding it to the simulated environment.
 func (sim *Simulation) Progenerate(v *Virus) error {
 	sim.addVirus(v)
 
@@ -61,7 +61,7 @@ func (sim *Simulation) Progenerate(v *Virus) error {
 	return nil
 }
 
-// Prepopulate prepopulates the simulated environment with n humans.
+// Prepopulate prepopulates the simulated environment with n uninfected humans.
 func (sim *Simulation) Prepopulate(n int) error {
 	humans, err := sim.birther.SpawnMany(n)
 	if err != nil {
@@ -71,11 +71,11 @@ func (sim *Simulation) Prepopulate(n int) error {
 	return nil
 }
 
-const howLongIsADay = 24 * time.Hour
+const dayDuration = 24 * time.Hour
 
 // Tick simulates a single day.
 func (sim *Simulation) Tick() {
-	// Clear pending infections, simulate each human.
+	// Update and track pending infections for each human.
 	for _, h := range sim.humans {
 		sim.tickHuman(h)
 	}
@@ -89,7 +89,7 @@ func (sim *Simulation) Tick() {
 	}
 
 	// Increment date, clear pending infections.
-	sim.date = sim.date.Add(howLongIsADay)
+	sim.date = sim.date.Add(dayDuration)
 	sim.pendingInfections = nil
 }
 
@@ -110,18 +110,24 @@ func (sim *Simulation) tickHuman(h *Human) {
 
 func (sim *Simulation) spreadVirusOnBehalfOf(h *Human) {
 	for i := 0; i < sim.sociability; i++ {
-		picked := sim.pickRandomHumanOtherThan(h)
-		if picked.Infected() {
+		luckyIndividual := sim.pickRandomHumanOtherThan(h)
+		if luckyIndividual.Infected() {
 			continue
 		}
 
 		// If luckySpin is less than the virulence, then that individual should be
 		// infected.
+		//
+		// luckySpin will always be between 1 and 100.
+		// Hence, a virulence of 0 means luckyIndividual will never be infected;
+		// a virulence of 50 means that the luckyIndividual will be infected if
+		// luckySpin is <= 50; and a virulence of 100 means that luckyIndividual
+		// will be infected if luckySpin is <= 100 (always).
 		luckySpin := prand.Intn(100) + 1
 		if luckySpin <= h.Virus.Virulence {
 			sim.pendingInfections = append(sim.pendingInfections, infection{
 				Spreader: h,
-				Receiver: picked,
+				Receiver: luckyIndividual,
 			})
 		}
 	}
@@ -133,11 +139,11 @@ func (sim *Simulation) pickRandomHumanOtherThan(h *Human) *Human {
 	}
 
 Top:
-	picked := sim.humans[prand.Intn(len(sim.humans))]
-	if picked == h {
+	choice := sim.humans[prand.Intn(len(sim.humans))]
+	if choice == h {
 		goto Top
 	}
-	return picked
+	return choice
 }
 
 // Humans returns the humans present in the simulation.

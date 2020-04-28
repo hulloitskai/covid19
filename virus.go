@@ -37,16 +37,15 @@ func (v *Virus) Mutate(maxDeviation int) *Virus {
 		virulence = prand.Intn(n) - maxDeviation
 	)
 
-	// Check bounds for lethality and virulence.
-	if lethality > 100 {
-		lethality = 100
-	} else if lethality < 0 {
-		lethality = 0
-	}
-	if virulence > 100 {
-		virulence = 100
-	} else if virulence < 0 {
-		virulence = 0
+	// Check bounds on lethality and virulence.
+	bounded := []*int{&lethality, &virulence}
+	for _, n := range bounded {
+		switch {
+		case *n > 100:
+			*n = 100
+		case *n < 0:
+			*n = 0
+		}
 	}
 
 	return &Virus{
@@ -61,13 +60,18 @@ var prand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 // NewVirus creates a Virus with the given lethality and virulence.
 func NewVirus(lethality, virulence int) *Virus {
-	err := validation.Validate(lethality, validation.Min(0), validation.Max(100))
-	if err != nil {
-		panic(errors.Wrap(err, "invalid lethality"))
+	values := map[string]int{
+		"lethality": lethality,
+		"virulence": virulence,
 	}
-	err = validation.Validate(virulence, validation.Min(0), validation.Max(100))
-	if err != nil {
-		panic(errors.Wrap(err, "invalid virulence"))
+	for name, value := range values {
+		if err := validation.Validate(
+			value,
+			validation.Min(0),
+			validation.Max(100),
+		); err != nil {
+			panic(errors.Wrapf(err, "invalid %s", name))
+		}
 	}
 	return &Virus{
 		Strain:    newStrain(),
